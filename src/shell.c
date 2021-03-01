@@ -40,7 +40,7 @@ int main()
 
         else if (l->seq == NULL)
         {
-            printf("Erreur : %s\n", l->err);
+            fprintf(stderr, "Erreur : %s\n", l->err);
         }
 
         else if (l->seq[0] == NULL)

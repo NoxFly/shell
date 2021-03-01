@@ -10,7 +10,7 @@ VPATH=src/
 # Note: -lnsl does not seem to work on Mac OS but will
 # probably be necessary on Solaris for linking network-related functions 
 #LIBS += -lsocket -lnsl -lrt
-LIBS+=-lpthread -lexplain
+LIBS+=-lpthread
 
 INCLUDE = readcmd.h csapp.h utils.h traitement.h
 OBJS = readcmd.o csapp.o utils.o traitement.o

@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <libexplain/execvp.h>
 
 static int shouldClose = 0;
 
@@ -54,7 +53,7 @@ int execCommand(struct cmdline *l)
 
     if (l->err)
     {
-        printf("Une erreur de commande c'est produite\n");
+        fprintf(stderr, "Une erreur de commande s'est produite\n");
         return -6;
     }
 
@@ -70,13 +69,15 @@ int execCommand(struct cmdline *l)
         execvp(argv[0], argv);
     }
 
+#ifdef VERBOSE
     printf("PID %d\n", pid_fils);
+#endif
 
     pid_t ret_pid = waitpid(0, &status, 0);
 
     if (ret_pid == -1)
     {
-        printf("%s : command not found\n", argv[0]);
+        fprintf(stderr, "%s : command not found\n", argv[0]);
         //Kill(ret_pid, EXIT_FAILURE);
         return -1;
     }
@@ -95,12 +96,6 @@ int execCommand(struct cmdline *l)
         close(save_out);
     }
     //Kill(pid_fils, EXIT_SUCCESS);
-
-    return 0;
-
-#ifndef VERBOSE
-    printf("pid_fils : %d\n", pid_fils);
-#endif
 
     return 0;
 }
@@ -124,7 +119,7 @@ void commandTreatment(struct cmdline *l)
 
     if (l->seq[1] != 0)
     {
-        printf("Les commandes avec des pipes n'ont pas été implémentée\n");
+        printf("Les commandes avec des pipes n'ont pas été implémentées\n");
         return;
     }
 
