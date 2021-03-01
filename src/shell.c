@@ -10,61 +10,73 @@
 #include "traitement.h"
 #include "utils.h"
 
-
 int main()
 {
-	struct cmdline *l;
-	int i, j;
+    struct cmdline *l;
+    int i, j;
     int showPrompter = 1;
 
-	while(!shouldTermClose()) {
+    while (!shouldTermClose())
+    {
         /* Display each command of the pipe */
-        if(showPrompter) {
+        if (showPrompter)
+        {
             printf("\033[0;31m%s@shell\033[0m:\033[0;90m%s\033[0m> ",
-                getenv("USER"),
-                strrep(getenv("PWD"), getenv("HOME"), "~")
-            );
+                   getenv("USER"),
+                   strrep(getenv("PWD"), getenv("HOME"), "~"));
         }
 
-        else {
+        else
+        {
             showPrompter = 1;
         }
 
         l = readcmd();
 
-        if(l == NULL || l->seq[0] == NULL) {
+        if (l == NULL)
+        {
             exit(1);
         }
 
+        else if (l->seq == NULL)
+        {
+            printf("Erreur : %s\n", l->err);
+        }
+
+        else if (l->seq[0] == NULL)
+        {
+            continue;
+        }
+
         // ignore commentaries
-        if(l->seq[0][0][0] == '#') {
+        else if (l->seq[0][0][0] == '#')
+        {
             showPrompter = 0;
-            continue;
         }
 
-
-        commandTreatment(l);
-
-        if (l->err) {
-            /* Syntax error, read another command */
-            printf("error: %s\n", l->err);
-            continue;
+        else
+        {
+            commandTreatment(l);
         }
-    
+
 #ifdef VERBOSE
-        if (l->in) printf("in: %s\n", l->in);
-        if (l->out) printf("out: %s\n", l->out);
+        if (l->in)
+            printf("in: %s\n", l->in);
+        if (l->out)
+            printf("out: %s\n", l->out);
 
-        for (i=0; l->seq[i]!=0; i++) {
-			char **cmd = l->seq[i];
-			printf("seq[%d]: ", i);
+        for (i = 0; l->seq[i] != 0; i++)
+        {
+            char **cmd = l->seq[i];
+            printf("seq[%d]: ", i);
 
-			for (j=0; cmd[j]!=0; j++) {
-				printf("%s ", cmd[j]);
-			}
+            for (j = 0; cmd[j] != 0; j++)
+            {
+                printf("%s ", cmd[j]);
+            }
 
-        	printf("\n");
+            printf("\n");
         }
 #endif
-	}
+    }
 }
