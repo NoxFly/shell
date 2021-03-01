@@ -8,7 +8,7 @@
 /* Read a command line from input stream. Return null when input closed.
 Display an error and call exit() in case of memory exhaustion. */
 struct cmdline *readcmd(void);
-
+// void freecmd(struct cmdline* s);
 
 /* Structure returned by readcmd() */
 struct cmdline {

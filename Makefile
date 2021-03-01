@@ -4,16 +4,16 @@
 .SUFFIXES:
 
 CC=gcc
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g -Wno-unused-variable -Wno-unused-but-set-variable
 VPATH=src/
 
 # Note: -lnsl does not seem to work on Mac OS but will
 # probably be necessary on Solaris for linking network-related functions 
 #LIBS += -lsocket -lnsl -lrt
-LIBS+=-lpthread
+LIBS+=-lpthread -lexplain
 
-INCLUDE = readcmd.h csapp.h
-OBJS = readcmd.o csapp.o
+INCLUDE = readcmd.h csapp.h utils.h traitement.h
+OBJS = readcmd.o csapp.o utils.o traitement.o
 INCLDIR = -I.
 
 all: shell
