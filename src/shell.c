@@ -16,33 +16,39 @@ int main()
     int i, j;
     int showPrompter = 1;
 
-    while (!shouldTermClose())
+    // while user didn't asked to quit shell
+    while (1)
     {
-        /* Display each command of the pipe */
-        if (showPrompter)
+        // show prompter
+        if (showPrompter == 1)
         {
             printf("\033[0;31m%s@shell\033[0m:\033[0;90m%s\033[0m> ",
                    getenv("USER"),
                    strrep(getenv("PWD"), getenv("HOME"), "~"));
         }
 
-        else
+        // if asked to hide prompter, reset it one round later
+        else if(showPrompter == 0) // precise 0 cause -1 means never re-display it
         {
             showPrompter = 1;
         }
 
+        // wait for a user action on the prompter
         l = readcmd();
 
+        // ? -> quit
         if (l == NULL)
         {
             exit(1);
         }
 
+        // An error occured
         else if (l->seq == NULL)
         {
             fprintf(stderr, "Erreur : %s\n", l->err);
         }
 
+        // nothing entered
         else if (l->seq[0] == NULL)
         {
             continue;
@@ -54,10 +60,12 @@ int main()
             showPrompter = 0;
         }
 
+        // treat given command
         else
         {
             commandTreatment(l);
         }
+
 
 #ifdef VERBOSE
         if (l->in)

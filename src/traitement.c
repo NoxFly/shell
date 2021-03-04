@@ -8,49 +8,54 @@
 #include <unistd.h>
 
 
-static int shouldClose = 0;
-
 int execCommand(struct cmdline *l)
 {
     char **argv = l->seq[0];
-    int file_in;
-    int file_out;
-
-    int save_in;
-    int save_out;
+    int file_in, file_out, save_in, save_out;
 
     if (l->in)
     {
         file_in = open(l->in, O_RDONLY);
+        
+        // entry point not found
         if (file_in == -1)
         {
-            perror("Erreur, le fichier d'entrée est introuvable");
+            perror("Erreur, le fichier d'entrée est introuvable\n");
             return -4;
         }
+        
         save_in = dup(0); // 0 --> stdin
+
+        // Erreur de redirection de l'entrée standard
         if (dup2(file_in, 0) == -1)
         {
-            perror("Erreur");
+            perror("Erreur, impossible de modifier l'entrée standard :\n");
             return -5;
         }
     }
 
     if (l->out)
     {
-        file_out = open(l->out, O_WRONLY | O_CREAT);
+        file_out = open(l->out, O_WRONLY | O_CREAT, S_IRWXU);
+
+        // permission denied
         if (file_out == -1)
         {
-            printf("%s : Permission denied", l->in);
+            printf("%s : Permission denied\n", l->in);
             return -2;
         }
+
         save_out = dup(1); // 1 --> stdout
+
+        // redirection
         if (dup2(file_out, 1) == -1)
         {
-            perror("Erreur de redirection dans le fichier");
+            perror("Erreur de redirection dans le fichier\n");
             return -3;
         }
     }
 
+    // error
     if (l->err)
     {
         fprintf(stderr, "Une erreur de commande s'est produite\n");
@@ -61,26 +66,44 @@ int execCommand(struct cmdline *l)
     printArgs(argv);
 #endif
 
+    // create child process
     pid_t pid_fils = fork();
     int status;
 
+    // child
     if (pid_fils == 0)
     {
         execvp(argv[0], argv);
+        // exit if an error occured
+        exit(errno);
+    }
+    
+    else
+    {
+        // wait for the child to return something
+        int status;
+	    while(wait(&status) > 0) {}
+
+        // if the child exited and not safely, then print the error
+        if(WIFEXITED(status) && WEXITSTATUS(status) != 0)
+        {
+            char msg[100];
+
+            // handled error (have a custom message for it)
+            if(WEXITSTATUS(status) < LENERROR)
+                strcpy(msg, errnoMessages[WEXITSTATUS(status)]);
+            // default error message
+            else
+                strcpy(msg, "An error occured");
+
+            fprintf(stderr, "%s : %s\n", argv[0], msg);
+        }
     }
 
 #ifdef VERBOSE
     printf("PID %d\n", pid_fils);
 #endif
 
-    pid_t ret_pid = waitpid(0, &status, 0);
-
-    if (ret_pid == -1)
-    {
-        fprintf(stderr, "%s : command not found\n", argv[0]);
-        //Kill(ret_pid, EXIT_FAILURE);
-        return -1;
-    }
     if (l->in)
     {
         close(file_in);
@@ -95,34 +118,34 @@ int execCommand(struct cmdline *l)
         dup2(save_out, 1);
         close(save_out);
     }
-    //Kill(pid_fils, EXIT_SUCCESS);
+    // Kill(pid_fils, EXIT_SUCCESS);
 
     return 0;
 }
 
 void commandTreatment(struct cmdline *l)
 {
-    if (l == NULL)
-    {
-        return;
-    }
-    if (l->seq[0] == NULL)
+    // security, even if it's normally treated in shell.c
+    if (l == NULL || l->seq[0] == NULL)
     {
         return;
     }
 
+    // quit or exit shell
     if (isEq(l->seq[0][0], "quit") || isEq(l->seq[0][0], "exit"))
     {
-        printf("exiting shell\n");
+        printf("Exiting shell\n");
         exit(0);
     }
 
+    // multiple commands
     if (l->seq[1] != 0)
     {
         printf("Les commandes avec des pipes n'ont pas été implémentées\n");
         return;
     }
 
+    // execute the command
     int res = execCommand(l);
 
 #ifdef VERBOSE
@@ -130,20 +153,19 @@ void commandTreatment(struct cmdline *l)
 #endif
 }
 
-int shouldTermClose()
-{
-    return shouldClose;
-}
 
 void printArgs(char **command)
 {
     int len = -1, i = 0;
 
+    // recover number of argument passed in the array
     while (command[i++] != 0)
         len++;
 
+    // create the array with a fixed size (allows to not do a malloc)
     char *argv[len];
 
+    // recover each argument
     i = 0;
     while (i < len)
     {
@@ -151,6 +173,7 @@ void printArgs(char **command)
         argv[i - 1] = command[i];
     }
 
+    // display
     printf("Commande : %s\nArgument%s (%d) : ", command[0], len > 1 ? "s" : "", len);
 
     for (int j = 0; j < len; j++)
