@@ -8,12 +8,16 @@
 #include <unistd.h>
 
 
-int execCommand(struct cmdline *l)
+int execCommand(struct cmdline *l, int pipe_in, int pipe_out)
 {
     char **argv = l->seq[0];
     int file_in, file_out, save_in, save_out;
 
-    if (l->in)
+    if(pipe_in != -1){
+        printf("pipe in detected\n");
+    }
+
+    else if (l->in)
     {
         file_in = open(l->in, O_RDONLY);
         
@@ -33,8 +37,10 @@ int execCommand(struct cmdline *l)
             return -5;
         }
     }
-
-    if (l->out)
+    if (pipe_out != -1){
+        printf("pipe out detected\n");
+    }
+    else if (l->out)
     {
         file_out = open(l->out, O_WRONLY | O_CREAT, S_IRWXU);
 
@@ -141,12 +147,23 @@ void commandTreatment(struct cmdline *l)
     // multiple commands
     if (l->seq[1] != 0)
     {
-        printf("Les commandes avec des pipes n'ont pas été implémentées\n");
-        return;
+        if(l->seq[2] != 0){
+            printf("Seulement 1 pipe marche pour l'instant");
+            return;
+        }
+        int pipe_in, pipe_out;
+        for(int i=0; l->seq[i] != 0; i++){
+            if(i == 0) {
+                // pipe_in
+            }
+        }
+
     }
 
-    // execute the command
-    int res = execCommand(l);
+    else {
+        // execute the command
+        int res = execCommand(l, -1, -1);
+    }
 
 #ifdef VERBOSE
     printf("resultat de la commande : %d\n", res);

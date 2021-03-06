@@ -10,6 +10,10 @@
 #include "traitement.h"
 #include "utils.h"
 
+#define TRACE1 (1==1)
+#define DEBUG_OPT_PROMPT (2==1)
+#define OPT_PROMPT_DIESE (1==1)
+
 int main()
 {
     struct cmdline *l;
@@ -20,11 +24,12 @@ int main()
     while (1)
     {
         // show prompter
-        if (showPrompter == 1)
+        if (!OPT_PROMPT_DIESE || showPrompter == 1)
         {
             printf("\033[0;31m%s@shell\033[0m:\033[0;90m%s\033[0m> ",
                    getenv("USER"),
                    strrep(getenv("PWD"), getenv("HOME"), "~"));
+	        fflush(stdout); // TODO 
         }
 
         // if asked to hide prompter, reset it one round later
@@ -35,7 +40,7 @@ int main()
 
         // wait for a user action on the prompter
         l = readcmd();
-
+	
         // ? -> quit
         if (l == NULL)
         {
@@ -57,6 +62,8 @@ int main()
         // ignore commentaries
         else if (l->seq[0][0][0] == '#')
         {
+	        if(TRACE1)
+                printf("\t[DEBUG] # Lu, je desactive l'affichage prompt.\n");
             showPrompter = 0;
         }
 
