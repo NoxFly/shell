@@ -33,7 +33,4 @@ void commandTreatment(struct cmdline *l);
  */
 void printArgs(char **command);
 
-#define LENERROR 3
-static char *errnoMessages[] = {"", "Permission denied", "Command not found"};
-
 #endif

@@ -144,9 +144,8 @@ IO_manager init_IO(struct cmdline *l)
 
 void command_handler(int sig)
 {
-    int e = kill(-getpid(), SIGINT);
-    if (e == -1)
-        perror("shell.c:kill");
+    if (kill(-getpid(), SIGINT) == -1)
+        perror("kill");
     return;
 }
 
@@ -208,7 +207,6 @@ void commandTreatment(struct cmdline *l)
         else if (pid_fils)
         {
             int status;
-            //Signal(SIGINT, command_handler);
             suppr_pipe(manager, i);
             if (l->background)
                 Signal(SIGCHLD, child_handler);
