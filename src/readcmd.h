@@ -11,12 +11,14 @@ struct cmdline *readcmd(void);
 // void freecmd(struct cmdline* s);
 
 /* Structure returned by readcmd() */
-struct cmdline {
-	char *err;	/* If not null, it is an error message that should be
+struct cmdline
+{
+	char *err;		/* If not null, it is an error message that should be
 			   displayed. The other fields are null. */
-	char *in;	/* If not null : name of file for input redirection. */
-	char *out;	/* If not null : name of file for output redirection. */
+	char *in;		/* If not null : name of file for input redirection. */
+	char *out;		/* If not null : name of file for output redirection. */
 	char ***seq;	/* See comment below */
+	int background; /* Modification pour savoir si la commande est à éxécuter en arrière plan */
 };
 
 /* Field seq of struct cmdline :

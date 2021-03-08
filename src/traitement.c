@@ -7,135 +7,175 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
-int execCommand(struct cmdline *l, int pipe_in, int pipe_out)
+void suppr_pipe(IO_manager manager, int num_command)
 {
-    char **argv = l->seq[0];
-    int file_in, file_out, save_in, save_out;
-
-    if(pipe_in != -1){
-        printf("pipe in detected\n");
-    }
-
-    else if (l->in)
+    if (num_command == 0)
     {
-        file_in = open(l->in, O_RDONLY);
-        
-        // entry point not found
-        if (file_in == -1)
+        if (manager->in)
         {
-            perror("Erreur, le fichier d'entrée est introuvable\n");
-            return -4;
-        }
-        
-        save_in = dup(0); // 0 --> stdin
-
-        // Erreur de redirection de l'entrée standard
-        if (dup2(file_in, 0) == -1)
-        {
-            perror("Erreur, impossible de modifier l'entrée standard :\n");
-            return -5;
+            close(manager->in);
         }
     }
-    if (pipe_out != -1){
-        printf("pipe out detected\n");
-    }
-    else if (l->out)
-    {
-        file_out = open(l->out, O_WRONLY | O_CREAT, S_IRWXU);
-
-        // permission denied
-        if (file_out == -1)
-        {
-            printf("%s : Permission denied\n", l->in);
-            return -2;
-        }
-
-        save_out = dup(1); // 1 --> stdout
-
-        // redirection
-        if (dup2(file_out, 1) == -1)
-        {
-            perror("Erreur de redirection dans le fichier\n");
-            return -3;
-        }
-    }
-
-    // error
-    if (l->err)
-    {
-        fprintf(stderr, "Une erreur de commande s'est produite\n");
-        return -6;
-    }
-
-#ifdef VERBOSE
-    printArgs(argv);
-#endif
-
-    // create child process
-    pid_t pid_fils = fork();
-    int status;
-
-    // child
-    if (pid_fils == 0)
-    {
-        execvp(argv[0], argv);
-        // exit if an error occured
-        exit(errno);
-    }
-    
     else
     {
-        // wait for the child to return something
-        int status;
-	    while(wait(&status) > 0) {}
-
-        // if the child exited and not safely, then print the error
-        if(WIFEXITED(status) && WEXITSTATUS(status) != 0)
+        close(manager->pipes[num_command - 1][0]);
+    }
+    if (num_command == manager->nb_pipes)
+    {
+        if (manager->out)
         {
-            char msg[100];
-
-            // handled error (have a custom message for it)
-            if(WEXITSTATUS(status) < LENERROR)
-                strcpy(msg, errnoMessages[WEXITSTATUS(status)]);
-            // default error message
-            else
-                strcpy(msg, "An error occured");
-
-            fprintf(stderr, "%s : %s\n", argv[0], msg);
+            close(manager->out);
         }
     }
+    else
+    {
+        close(manager->pipes[num_command][1]);
+    }
+}
 
-#ifdef VERBOSE
-    printf("PID %d\n", pid_fils);
-#endif
+void IO_reset(IO_manager manager, int num_command)
+{
+    if (num_command == manager->nb_pipes)
+    {
+        if (manager->out != -1)
+        {
+            close(manager->out);
+        }
+    }
+}
+
+void IO_redirect(IO_manager manager, int num_command)
+{
+    // set the stdin
+    if (num_command == 0)
+    {
+        if (manager->in != -1)
+        {
+            dup2(manager->in, STDIN_FILENO);
+        }
+    }
+    else
+    {
+        dup2(manager->pipes[num_command - 1][0], STDIN_FILENO);
+    }
+    // set the stdout
+    if (num_command == manager->nb_pipes)
+    {
+        if (manager->out != -1)
+        {
+            dup2(manager->out, STDOUT_FILENO);
+        }
+    }
+    else
+    {
+        dup2(manager->pipes[num_command][1], STDOUT_FILENO);
+    }
+
+    return;
+}
+
+void free_IO(IO_manager manager)
+{
+    if (manager != NULL)
+    {
+        for (int i = 0; i < manager->nb_pipes; i++)
+            free(manager->pipes[i]);
+        free(manager->pipes);
+        free(manager);
+        manager = NULL;
+    }
+}
+
+IO_manager init_IO(struct cmdline *l)
+{
+    IO_manager manager = malloc(sizeof(IO_manager));
 
     if (l->in)
     {
-        close(file_in);
-        dup2(save_in, 0);
-        close(save_in);
+        manager->in = open(l->in, O_RDONLY);
+        if (manager->in == -1)
+        {
+            perror("IO error stdin");
+            free(manager);
+            return NULL;
+        }
+    }
+    else
+    {
+        manager->in = -1;
     }
 
     if (l->out)
     {
-        fflush(stdout);
-        close(file_out);
-        dup2(save_out, 1);
-        close(save_out);
+        manager->out = open(l->out, O_WRONLY | O_CREAT, 0600);
+        if (manager->out == -1)
+        {
+            perror("IO error stdout");
+            free(manager);
+            return NULL;
+        }
     }
-    // Kill(pid_fils, EXIT_SUCCESS);
+    else
+    {
+        manager->out = -1;
+    }
 
-    return 0;
+    int nb_cmd;
+    for (nb_cmd = 0; l->seq[nb_cmd] != 0; nb_cmd++)
+        ;
+
+    manager->nb_pipes = nb_cmd > 0 ? nb_cmd - 1 : 0;
+    manager->pipes = malloc(sizeof(int *) * manager->nb_pipes);
+
+    for (int i = 0; i < manager->nb_pipes; i++)
+    {
+        manager->pipes[i] = malloc(sizeof(int) * 2);
+
+        if (pipe(manager->pipes[i]) == -1)
+        {
+            manager->nb_pipes = i + 1;
+            free_IO(manager);
+            return manager;
+        }
+    }
+
+    return manager;
+}
+
+void command_handler(int sig)
+{
+    int e = kill(-getpid(), SIGINT);
+    if (e == -1)
+        perror("shell.c:kill");
+    return;
+}
+
+void child_handler(int sig)
+{
+#ifdef VERBOSE
+    printf("Child_handler triggered\n");
+#endif
+    int status;
+    pid_t pid_child;
+    while ((pid_child = waitpid(-1, &status, WNOHANG)) != 0)
+    {
+        if (pid_child == -1)
+        {
+            break;
+        }
+        else
+        {
+            printf("process %d exited\n", pid_child);
+        }
+    }
+    return;
 }
 
 void commandTreatment(struct cmdline *l)
 {
     // security, even if it's normally treated in shell.c
-    if (l == NULL || l->seq[0] == NULL)
-    {
+    if (!l || l->err || !l->seq[0])
         return;
-    }
 
     // quit or exit shell
     if (isEq(l->seq[0][0], "quit") || isEq(l->seq[0][0], "exit"))
@@ -144,56 +184,52 @@ void commandTreatment(struct cmdline *l)
         exit(0);
     }
 
-    // multiple commands
-    if (l->seq[1] != 0)
+    IO_manager manager = init_IO(l);
+
+    if (!manager)
     {
-        if(l->seq[2] != 0){
-            printf("Seulement 1 pipe marche pour l'instant");
+        perror("Failed to create pipe");
+        return;
+    }
+
+    for (int i = 0; l->seq[i] != 0; i++)
+    {
+        pid_t pid_fils;
+        char **command = l->seq[i];
+
+        // create fork : error
+        if ((pid_fils = fork()) == -1)
+        {
+            perror("fork");
             return;
         }
-        int pipe_in, pipe_out;
-        for(int i=0; l->seq[i] != 0; i++){
-            if(i == 0) {
-                // pipe_in
-            }
+
+        // parent
+        else if (pid_fils)
+        {
+            int status;
+            //Signal(SIGINT, command_handler);
+            suppr_pipe(manager, i);
+            if (l->background)
+                Signal(SIGCHLD, child_handler);
+
+            else if (waitpid(pid_fils, &status, 0) != pid_fils)
+                printf("%s : Exit whith status : %d\n", command[0], status);
+
+            IO_reset(manager, i);
+        }
+        else
+        {
+            IO_redirect(manager, i);
+            execvp(command[0], command);
+            exit(errno);
         }
 
-    }
-
-    else {
-        // execute the command
-        int res = execCommand(l, -1, -1);
-    }
-
 #ifdef VERBOSE
-    printf("resultat de la commande : %d\n", res);
+        printf("PID %d\n", pid_fils);
 #endif
-}
-
-
-void printArgs(char **command)
-{
-    int len = -1, i = 0;
-
-    // recover number of argument passed in the array
-    while (command[i++] != 0)
-        len++;
-
-    // create the array with a fixed size (allows to not do a malloc)
-    char *argv[len];
-
-    // recover each argument
-    i = 0;
-    while (i < len)
-    {
-        i++;
-        argv[i - 1] = command[i];
     }
 
-    // display
-    printf("Commande : %s\nArgument%s (%d) : ", command[0], len > 1 ? "s" : "", len);
-
-    for (int j = 0; j < len; j++)
-        printf("%s%s", argv[j], (j < len - 1) ? ", " : "");
-    printf("\n");
+    free_IO(manager);
+    return;
 }

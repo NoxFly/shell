@@ -7,7 +7,7 @@
  * @param s2 second string
  * @return 0 means they're equal, other number indicates the index of the first alphabetical change
  */
-int isEq(char* s1, char* s2);
+int isEq(char *s1, char *s2);
 
 /**
  * Similar as str_replace function.
@@ -17,6 +17,8 @@ int isEq(char* s1, char* s2);
  * @param replacement the subtring to replace in
  * @return the new string
  */
-char* strrep(char* source, char* substring, char* replacement);
+char *strrep(char *source, char *substring, char *replacement);
+
+void printArgs(char **command);
 
 #endif // UTILS_H
