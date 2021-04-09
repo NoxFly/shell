@@ -1,0 +1,14 @@
+total 120
+drwxr-xr-x 5 leer0r leer0r  4096 18 mars  10:20 .
+drwxr-xr-x 3 leer0r leer0r  4096 18 mars  09:25 ..
+-rwxr-xr-x 1 leer0r leer0r   306 18 mars  09:25 compress.sh
+drwxr-xr-x 8 leer0r leer0r  4096 18 mars  09:25 .git
+-rw-r--r-- 1 leer0r leer0r    20 18 mars  09:25 .gitignore
+-rw-r--r-- 1 leer0r leer0r  1069 18 mars  09:25 LICENSE
+-rw-r--r-- 1 leer0r leer0r   547 18 mars  09:30 Makefile
+-rw-r--r-- 1 leer0r leer0r  1186 18 mars  09:25 README.md
+-rwxr-xr-x 1 leer0r leer0r  5143 18 mars  09:25 sdriver.pl
+-rwxr-xr-x 1 leer0r leer0r 72288 18 mars  09:30 shell
+drwxr-xr-x 2 leer0r leer0r  4096 18 mars  09:25 src
+drwxr-xr-x 2 leer0r leer0r  4096 18 mars  09:25 tests
+-rw------- 1 leer0r leer0r     0 18 mars  10:20 toto

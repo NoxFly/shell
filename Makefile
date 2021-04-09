@@ -4,7 +4,7 @@
 .SUFFIXES:
 
 CC=gcc
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g -Wno-unused-variable
 VPATH=src/
 
 # Note: -lnsl does not seem to work on Mac OS but will
